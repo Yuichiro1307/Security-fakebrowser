@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Google Chrome</title>
+  <link rel="icon" href="chrome-favicon.png" type="image/png" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+    }
+
+    #toolbar {
+      display: flex;
+      align-items: center;
+      padding: 6px;
+      background-color: #e0e0e0;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #urlBar {
+      flex-grow: 1;
+      padding: 6px 10px;
+      font-size: 14px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      margin-right: 6px;
+    }
+
+    #goButton {
+      padding: 6px 12px;
+      font-size: 14px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    iframe {
+      width: 100%;
+      height: calc(100vh - 50px);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <input type="text" id="urlBar" placeholder="検索またはURLを入力" />
+    <button id="goButton" onclick="navigate()">移動</button>
+  </div>
+  <iframe id="browserFrame" src="about:blank"></iframe>
+
+  <script>
+    let blacklist = [];
+
+    // 外部の blacklist.json を読み込む
+    async function loadBlacklist() {
+      try {
+        const res = await fetch("blacklist.json");
+        if (!res.ok) throw new Error("取得失敗");
+        blacklist = await res.json();
+      } catch (err) {
+        console.warn("⚠️ ブラックリストを読み込めませんでした No Loadinged Black list:", err);
+      }
+    }
+
+    function isBlacklisted(url) {
+      const parsed = new URL(url.startsWith("http") ? url : "https://" + url);
+      const host = parsed.hostname;
+      const full = parsed.href;
+      return blacklist.some(entry =>
+        full.includes(entry) || host.includes(entry)
+      );
+    }
+
+    async function navigate() {
+      const input = document.getElementById("urlBar").value.trim();
+      if (!input) return;
+
+      const url = input.startsWith("http") ? input : "https://" + input;
+
+      if (isBlacklisted(url)) {
+        alert("⚠️ このURLは危険なためブロックされました。 URL Broked\n" + url);
+        document.getElementById("browserFrame").src = "about:blank";
+      } else {
+        document.getElementById("browserFrame").src = url;
+      }
+    }
+
+    // 初期化
+    loadBlacklist();
+  </script>
+</body>
+</html>
