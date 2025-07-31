@@ -38,55 +38,67 @@
       cursor: pointer;
     }
 
-    iframe {
-      width: 100%;
-      height: calc(100vh - 50px);
-      border: none;
+    #status {
+      padding: 10px;
+      font-size: 14px;
+      background: #fffbe6;
+      border-top: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
   <div id="toolbar">
     <input type="text" id="urlBar" placeholder="検索またはURLを入力" />
-    <button id="goButton" onclick="navigate()">移動</button>
+    <button id="goButton" onclick="openSafe()">移動</button>
   </div>
-  <iframe id="browserFrame" src="about:blank"></iframe>
+  <div id="status">🔒 このブラウザは安全モードで動作中です</div>
 
   <script>
     let blacklist = [];
 
-    // 外部の blacklist.json を読み込む
     async function loadBlacklist() {
       try {
         const res = await fetch("blacklist.json");
-        if (!res.ok) throw new Error("取得失敗");
+        if (!res.ok) throw new Error("読み込み失敗");
         blacklist = await res.json();
       } catch (err) {
-        console.warn("⚠️ ブラックリストを読み込めませんでした No Loadinged Black list:", err);
+        console.warn("⚠️ ブラックリストの読み込みに失敗しました。一度閉じてから再度ページを開いてください。:", err);
+        blacklist = [];
       }
     }
 
     function isBlacklisted(url) {
-      const parsed = new URL(url.startsWith("http") ? url : "https://" + url);
-      const host = parsed.hostname;
-      const full = parsed.href;
-      return blacklist.some(entry =>
-        full.includes(entry) || host.includes(entry)
-      );
+      try {
+        const parsed = new URL(url.startsWith("http") ? url : "https://" + url);
+        const host = parsed.hostname;
+        const full = parsed.href;
+        return blacklist.some(entry =>
+          full.includes(entry) || host.includes(entry)
+        );
+      } catch {
+        return true; // URL構文エラーもブロック
+      }
     }
 
-    async function navigate() {
+    function openSafe() {
       const input = document.getElementById("urlBar").value.trim();
-      if (!input) return;
-
       const url = input.startsWith("http") ? input : "https://" + input;
 
       if (isBlacklisted(url)) {
-        alert("⚠️ このURLは危険なためブロックされました。 URL Broked\n" + url);
-        document.getElementById("browserFrame").src = "about:blank";
-      } else {
-        document.getElementById("browserFrame").src = url;
+        alert("🚫 このページはセキュリティ上の理由からブロックされました。\n" + url);
+        return;
       }
+
+      const win = window.open(url, "_blank");
+
+      // オプション：一定時間後にページを切断する
+      // setTimeout(() => {
+      //   try {
+      //     win.location.href = "about:blank";
+      //   } catch (e) {
+      //     console.warn("セキュリティ制限で書き換え不可");
+      //   }
+      // }, 5000);
     }
 
     // 初期化
